@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shell监控与AI运维助手</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🛡️ Shell监控与AI运维助手</h1>
+            <div class="header-info">
+                <div class="llm-status">
+                    <span class="label">LLM:</span>
+                    <span id="llm-status-indicator" class="status-dot unknown"></span>
+                    <span id="llm-status-text">检测中...</span>
+                    <span id="llm-model" class="model-badge"></span>
+                </div>
+                <div class="connection-status">
+                    <span class="label">WebSocket:</span>
+                    <span id="status-indicator" class="status-dot disconnected"></span>
+                    <span id="status-text">未连接</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="client-bar">
+            <div class="client-list">
+                <span class="label">客户端:</span>
+                <select id="client-select">
+                    <option value="">-- 选择客户端 --</option>
+                </select>
+                <span id="client-count">(0 个连接)</span>
+            </div>
+            <div class="connection-form">
+                <input type="text" id="server-url" placeholder="ws://localhost:8765" value="ws://localhost:8765">
+                <input type="text" id="auth-token" placeholder="认证Token">
+                <button id="auth-btn" class="btn-auth">认证</button>
+                <button id="connect-btn">连接</button>
+            </div>
+        </div>
+
+        <main class="main-content">
+            <div class="panel left-panel">
+                <div class="panel-header">
+                    <h2>📋 Shell终端</h2>
+                    <div class="panel-actions">
+                        <button id="clear-log-btn" class="btn-small">清空</button>
+                        <button id="copy-log-btn" class="btn-small">复制日志</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div id="terminal-container" class="terminal-container"></div>
+                </div>
+            </div>
+
+            <div class="panel right-panel">
+                <div class="panel-header">
+                    <h2>🤖 AI安全助手</h2>
+                </div>
+                <div class="panel-content chat-panel">
+                    <div id="chat-messages" class="chat-messages-full">
+                        <div class="chat-placeholder">粘贴Shell日志或输入问题与AI助手对话...</div>
+                    </div>
+                    <div class="chat-input-area">
+                        <textarea id="chat-input" placeholder="粘贴Shell日志或输入问题..."></textarea>
+                        <div class="chat-actions">
+                            <button id="chat-send-btn" class="btn-primary">发送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>

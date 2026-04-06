@@ -1,0 +1,49 @@
+server:
+  host: "0.0.0.0"
+  port: 8765
+  web_port: 8080
+  heartbeat_timeout: 180
+
+# LLM配置 - 选择一种方式
+
+# 方式1: 使用本地 Ollama
+llm:
+  backend: "ollama"
+  model: "llama3"                      # 你本地安装的模型名称
+  base_url: "http://localhost:11434"   # Ollama 默认地址
+  temperature: 0.7
+  max_tokens: 2000
+  timeout: 30
+
+# 方式2: 使用 OpenAI 兼容 API (DeepSeek/OpenAI等)
+# llm:
+#   backend: "openai"
+#   model: "deepseek-chat"
+#   api_key: "your-api-key"            # 建议使用环境变量 LLM_API_KEY
+#   base_url: "https://api.deepseek.com/v1"
+#   temperature: 0.7
+#   max_tokens: 2000
+#   timeout: 30
+
+context:
+  max_length: 4000
+  head_length: 500
+  tail_length: 500
+
+security:
+  auth_enabled: true
+  auth_tokens:
+    - "your-secure-token"              # 请修改为安全的Token
+  wss_enabled: false
+  cert_file: ""
+  key_file: ""
+
+storage:
+  history_enabled: true
+  history_path: "./data/history"
+  audit_enabled: true
+  audit_path: "./data/audit"
+
+logging:
+  level: "INFO"
+  file: "./logs/app.log"
