@@ -5,6 +5,13 @@ let currentClientId = '';
 let sessionId = '';
 let llmStatus = null;
 let term = null;
+let fitAddon = null;
+let heartbeatInterval = null;
+let reconnectAttempts = 0;
+let isManualDisconnect = false;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 5000;
+const HEARTBEAT_INTERVAL = 30000;
 
 const elements = {
     statusIndicator: document.getElementById('status-indicator'),
@@ -62,15 +69,17 @@ function initTerminal() {
         allowTransparency: true
     });
     
+    fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
     term.open(elements.terminalContainer);
     
     setTimeout(() => {
-        term.fit();
+        fitAddon.fit();
     }, 100);
     
     window.addEventListener('resize', () => {
-        if (term) {
-            term.fit();
+        if (term && fitAddon) {
+            fitAddon.fit();
         }
     });
 }
@@ -80,6 +89,46 @@ function updateConnectionStatus(connected) {
     elements.statusIndicator.className = `status-dot ${connected ? 'connected' : 'disconnected'}`;
     elements.statusText.textContent = connected ? '已连接' : '未连接';
     elements.connectBtn.textContent = connected ? '断开' : '连接';
+}
+
+function startHeartbeat() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+    }
+    
+    heartbeatInterval = setInterval(() => {
+        if (ws && isConnected && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'ping'
+            }));
+        }
+    }, HEARTBEAT_INTERVAL);
+    
+    console.log('Heartbeat started');
+}
+
+function stopHeartbeat() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+        console.log('Heartbeat stopped');
+    }
+}
+
+function reconnect() {
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        elements.statusText.textContent = `重连中 (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`;
+        console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+        
+        setTimeout(() => {
+            connect();
+        }, RECONNECT_DELAY);
+    } else {
+        console.log('Max reconnection attempts reached');
+        elements.statusText.textContent = '连接失败';
+        reconnectAttempts = 0;
+    }
 }
 
 function updateLLMStatus(status) {
@@ -114,6 +163,13 @@ function appendShellLog(content) {
 function clearTerminal() {
     if (term) {
         term.clear();
+    }
+    
+    if (ws && isConnected && currentClientId) {
+        ws.send(JSON.stringify({
+            type: 'clear_logs',
+            client_id: currentClientId
+        }));
     }
 }
 
@@ -224,12 +280,15 @@ async function connect() {
     const serverUrl = elements.serverUrl.value;
     const authToken = elements.authToken.value;
     
+    isManualDisconnect = false;
+    
     try {
         ws = new WebSocket(serverUrl);
         
         ws.onopen = async () => {
             console.log('WebSocket connected');
             updateConnectionStatus(true);
+            reconnectAttempts = 0;
             
             ws.send(JSON.stringify({
                 type: 'register',
@@ -242,6 +301,8 @@ async function connect() {
                     token: authToken
                 }));
             }
+            
+            startHeartbeat();
         };
         
         ws.onmessage = (event) => {
@@ -264,6 +325,12 @@ async function connect() {
                 elements.authBtn.textContent = '认证';
                 elements.authBtn.disabled = false;
             }
+            
+            stopHeartbeat();
+            
+            if (!isManualDisconnect) {
+                reconnect();
+            }
         };
         
         ws.onerror = (error) => {
@@ -274,16 +341,25 @@ async function connect() {
     } catch (error) {
         console.error('Connection failed:', error);
         updateConnectionStatus(false);
+        
+        if (!isManualDisconnect) {
+            reconnect();
+        }
     }
 }
 
 function disconnect() {
+    isManualDisconnect = true;
+    stopHeartbeat();
+    
     if (ws) {
         ws.close();
         ws = null;
     }
+    
     updateConnectionStatus(false);
     isAuthenticated = false;
+    reconnectAttempts = 0;
     elements.authToken.disabled = false;
     elements.authToken.style.backgroundColor = '';
     elements.authToken.title = '';
@@ -326,6 +402,13 @@ function handleMessage(data) {
             break;
             
         case 'pong':
+            break;
+            
+        case 'logs_cleared':
+            console.log('Logs cleared for client:', data.client_id);
+            if (term && data.client_id === currentClientId) {
+                term.clear();
+            }
             break;
             
         case 'error':
@@ -408,9 +491,73 @@ function initEventListeners() {
     });
 }
 
+function initResizer() {
+    const resizer = document.getElementById('resizer');
+    const leftPanel = document.querySelector('.left-panel');
+    const rightPanel = document.querySelector('.right-panel');
+    const mainContent = document.querySelector('.main-content');
+    
+    let isResizing = false;
+    let startX = 0;
+    let startLeftWidth = 0;
+    let startRightWidth = 0;
+    
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startLeftWidth = leftPanel.offsetWidth;
+        startRightWidth = rightPanel.offsetWidth;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        
+        const deltaX = e.clientX - startX;
+        const containerWidth = mainContent.offsetWidth;
+        const minPanelWidth = 300;
+        
+        let newLeftWidth = startLeftWidth + deltaX;
+        let newRightWidth = startRightWidth - deltaX;
+        
+        if (newLeftWidth < minPanelWidth) {
+            newLeftWidth = minPanelWidth;
+            newRightWidth = containerWidth - minPanelWidth - resizer.offsetWidth;
+        }
+        
+        if (newRightWidth < minPanelWidth) {
+            newRightWidth = minPanelWidth;
+            newLeftWidth = containerWidth - minPanelWidth - resizer.offsetWidth;
+        }
+        
+        const leftFlex = newLeftWidth / (newLeftWidth + newRightWidth);
+        const rightFlex = newRightWidth / (newLeftWidth + newRightWidth);
+        
+        leftPanel.style.flex = leftFlex;
+        rightPanel.style.flex = rightFlex;
+        
+        if (term && fitAddon) {
+            fitAddon.fit();
+        }
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initTerminal();
     initEventListeners();
+    initResizer();
     checkLLMStatus();
     
     setTimeout(() => {

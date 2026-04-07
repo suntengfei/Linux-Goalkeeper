@@ -172,11 +172,46 @@ body {
 }
 
 .left-panel {
-    flex: 1.2;
+    flex: 1.5;
+    min-width: 300px;
+}
+
+.resizer {
+    width: 8px;
+    background-color: #0f3460;
+    cursor: col-resize;
+    position: relative;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+}
+
+.resizer:hover {
+    background-color: #e94560;
+}
+
+.resizer::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 30px;
+    background-color: #4ecdc4;
+    border-radius: 1px;
+}
+
+.resizer:hover::before {
+    background-color: #fff;
+}
+
+.resizer.dragging {
+    background-color: #e94560;
 }
 
 .right-panel {
-    flex: 0.8;
+    flex: 1;
+    min-width: 300px;
 }
 
 .panel-header {
@@ -233,6 +268,7 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 .terminal-container {
@@ -240,14 +276,22 @@ body {
     background-color: #0a0a1a;
     padding: 10px;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .terminal-container .xterm {
+    flex: 1;
     height: 100%;
 }
 
 .terminal-container .xterm-viewport {
     background-color: #0a0a1a !important;
+}
+
+.terminal-container .xterm-screen {
+    height: 100% !important;
 }
 
 .chat-panel {

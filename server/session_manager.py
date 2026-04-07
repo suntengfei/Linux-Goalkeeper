@@ -8,6 +8,11 @@ from server.config import get_security_config
 logger = get_logger("session")
 
 class ClientContext:
+    MAX_TERMINAL_BUFFER = 50000
+    MAX_SHELL_HISTORY = 500
+    MAX_CONTEXT = 4000
+    MAX_CHAT_HISTORY = 20
+    
     def __init__(self, client_id: str):
         self.client_id = client_id
         self.terminal_buffer: str = ""
@@ -16,31 +21,42 @@ class ClientContext:
         self.context: str = ""
         self.created_at = datetime.now()
         self.last_activity = datetime.now()
+        self.cleared_at: Optional[datetime] = None
     
     def add_raw_log(self, content: str):
         self.terminal_buffer += content
-        if len(self.terminal_buffer) > 100000:
-            self.terminal_buffer = self.terminal_buffer[-100000:]
+        if len(self.terminal_buffer) > self.MAX_TERMINAL_BUFFER:
+            self.terminal_buffer = self.terminal_buffer[-self.MAX_TERMINAL_BUFFER:]
         
         self.shell_history.append({
             "timestamp": datetime.now().isoformat(),
             "content": content
         })
+        if len(self.shell_history) > self.MAX_SHELL_HISTORY:
+            self.shell_history = self.shell_history[-self.MAX_SHELL_HISTORY:]
+        
         self.context += f"\n{content}"
-        if len(self.context) > 8000:
-            self.context = self.context[-8000:]
+        if len(self.context) > self.MAX_CONTEXT:
+            self.context = self.context[-self.MAX_CONTEXT:]
         self.last_activity = datetime.now()
     
     def get_terminal_buffer(self) -> str:
         return self.terminal_buffer
+    
+    def clear_logs(self):
+        self.terminal_buffer = ""
+        self.shell_history = []
+        self.context = ""
+        self.cleared_at = datetime.now()
+        self.last_activity = datetime.now()
     
     def add_chat_message(self, role: str, content: str):
         self.chat_history.append({
             "role": role,
             "content": content
         })
-        if len(self.chat_history) > 20:
-            self.chat_history = self.chat_history[-20:]
+        if len(self.chat_history) > self.MAX_CHAT_HISTORY:
+            self.chat_history = self.chat_history[-self.MAX_CHAT_HISTORY:]
         self.last_activity = datetime.now()
     
     def get_llm_messages(self, system_prompt: str) -> List[Dict[str, str]]:

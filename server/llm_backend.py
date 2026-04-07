@@ -78,10 +78,22 @@ class OllamaBackend(LLMBackend):
                         result = await response.json()
                         return result.get("message", {}).get("content", "")
                     else:
-                        return f"Error: {response.status}"
+                        error_text = await response.text()
+                        error_msg = f"API error {response.status}: {error_text}"
+                        logger.error(f"Ollama chat error: {error_msg}")
+                        return f"Error: {error_msg}"
+        except asyncio.TimeoutError:
+            error_msg = f"Request timeout after {self.timeout}s"
+            logger.error(f"Ollama chat timeout: {error_msg}")
+            return f"Error: {error_msg}"
+        except aiohttp.ClientError as e:
+            error_msg = f"HTTP client error: {type(e).__name__}: {str(e)}"
+            logger.error(f"Ollama chat error: {error_msg}")
+            return f"Error: {error_msg}"
         except Exception as e:
-            logger.error(f"Ollama chat error: {e}")
-            return f"Error: {str(e)}"
+            error_msg = f"Unexpected error: {type(e).__name__}: {str(e)}"
+            logger.error(f"Ollama chat error: {error_msg}", exc_info=True)
+            return f"Error: {error_msg}"
     
     def _parse_response(self, response: str) -> Dict[str, Any]:
         return {
@@ -192,10 +204,22 @@ class OpenAIBackend(LLMBackend):
                         result = await response.json()
                         return result.get("choices", [{}])[0].get("message", {}).get("content", "")
                     else:
-                        return f"Error: {response.status}"
+                        error_text = await response.text()
+                        error_msg = f"API error {response.status}: {error_text}"
+                        logger.error(f"OpenAI chat error: {error_msg}")
+                        return f"Error: {error_msg}"
+        except asyncio.TimeoutError:
+            error_msg = f"Request timeout after {self.timeout}s"
+            logger.error(f"OpenAI chat timeout: {error_msg}")
+            return f"Error: {error_msg}"
+        except aiohttp.ClientError as e:
+            error_msg = f"HTTP client error: {type(e).__name__}: {str(e)}"
+            logger.error(f"OpenAI chat error: {error_msg}")
+            return f"Error: {error_msg}"
         except Exception as e:
-            logger.error(f"OpenAI chat error: {e}")
-            return f"Error: {str(e)}"
+            error_msg = f"Unexpected error: {type(e).__name__}: {str(e)}"
+            logger.error(f"OpenAI chat error: {error_msg}", exc_info=True)
+            return f"Error: {error_msg}"
     
     def _parse_response(self, response: str) -> Dict[str, Any]:
         return {

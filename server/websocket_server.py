@@ -32,6 +32,7 @@ class WebSocketServer:
             "get_clients": self._handle_get_clients,
             "get_client_history": self._handle_get_client_history,
             "register": self._handle_register,
+            "clear_logs": self._handle_clear_logs,
         }
     
     async def _broadcast_to_all(self, data: Dict[str, Any], exclude_session_id: str = None):
@@ -152,6 +153,26 @@ class WebSocketServer:
             await session_manager.remove_session(session.session_id)
             await self._broadcast_client_list()
     
+    async def _handle_clear_logs(self, session, data: Dict[str, Any]):
+        client_id = data.get("client_id")
+        
+        if not client_id:
+            await self._send_error(session.websocket, "Missing client_id")
+            return
+        
+        context = session_manager.get_client_context(client_id)
+        if context:
+            context.clear_logs()
+            logger.info(f"Logs cleared for client: {client_id}")
+            
+            await self._send_message(session.websocket, {
+                "type": "logs_cleared",
+                "client_id": client_id,
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            await self._send_error(session.websocket, f"Client context not found: {client_id}")
+    
     async def _handle_message(self, session, data: Dict[str, Any]):
         msg_type = data.get("type")
         handler = self.message_handlers.get(msg_type)
@@ -184,6 +205,16 @@ class WebSocketServer:
         if not content:
             return
         
+        if not isinstance(content, str):
+            logger.warning(f"Invalid content type from {session.client_id}: {type(content)}")
+            await self._send_error(session.websocket, "Invalid content type")
+            return
+        
+        MAX_LOG_SIZE = 100000
+        if len(content) > MAX_LOG_SIZE:
+            logger.warning(f"Log content too large from {session.client_id}: {len(content)} chars")
+            content = content[:MAX_LOG_SIZE]
+        
         logger.info(f"Processing log: {len(content)} chars")
         
         client_context = session_manager.get_client_context(session.client_id)
@@ -213,6 +244,16 @@ class WebSocketServer:
         if not message:
             logger.warning("Empty message, skipping")
             return
+        
+        if not isinstance(message, str):
+            logger.warning(f"Invalid message type from {session.client_id}: {type(message)}")
+            await self._send_error(session.websocket, "Invalid message type")
+            return
+        
+        MAX_MESSAGE_SIZE = 10000
+        if len(message) > MAX_MESSAGE_SIZE:
+            logger.warning(f"Message too large from {session.client_id}: {len(message)} chars")
+            message = message[:MAX_MESSAGE_SIZE]
         
         if not target_client_id or target_client_id.startswith("web_client_"):
             all_clients = await session_manager.get_all_clients()
@@ -248,7 +289,7 @@ class WebSocketServer:
             response = "抱歉，LLM 响应超时，请重试。"
             logger.error("LLM timeout")
         except Exception as e:
-            logger.error(f"LLM chat error: {e}")
+            logger.error(f"LLM chat error: {e}", exc_info=True)
             response = f"抱歉，发生错误: {str(e)}"
         
         client_context.add_chat_message("user", message)
