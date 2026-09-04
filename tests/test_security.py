@@ -90,20 +90,25 @@ MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8PbnGy0AHB7MbzYLdZ7ZvVy7F7V
 
 class TestAuthentication:
     @pytest.mark.asyncio
-    async def test_authentication_success(self):
+    async def test_authentication_success(self, monkeypatch):
         manager = SessionManager()
-        
+
         class MockWebSocket:
             pass
-        
+
         session = await manager.create_session("test-client", MockWebSocket())
-        
-        from server.config import get_security_config
-        original_config = get_security_config()
-        
+
+        from server import session_manager as session_manager_module
+        monkeypatch.setattr(
+            session_manager_module,
+            "get_security_config",
+            lambda: {"auth_enabled": True, "auth_tokens": ["valid-token"]}
+        )
+
         result = await manager.authenticate_session(session.session_id, "valid-token")
-        
-        assert session.authenticated == True or result == True
+
+        assert result == True
+        assert session.authenticated == True
     
     @pytest.mark.asyncio
     async def test_authentication_failure_invalid_token(self):

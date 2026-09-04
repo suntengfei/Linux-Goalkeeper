@@ -39,8 +39,8 @@ security:
   key_file: ""
 
 storage:
-  history_enabled: true
-  history_path: "./data/history"
+  record_enabled: true
+  record_path: "./data/records"
   audit_enabled: true
   audit_path: "./data/audit"
 

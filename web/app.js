@@ -279,9 +279,22 @@ async function authenticate() {
 async function connect() {
     const serverUrl = elements.serverUrl.value;
     const authToken = elements.authToken.value;
-    
+
     isManualDisconnect = false;
-    
+
+    // 校验服务器地址，仅允许 ws/wss 协议，避免任意URL注入
+    let parsedUrl;
+    try {
+        parsedUrl = new URL(serverUrl);
+    } catch (e) {
+        alert('无效的服务器地址');
+        return;
+    }
+    if (parsedUrl.protocol !== 'ws:' && parsedUrl.protocol !== 'wss:') {
+        alert('服务器地址必须以 ws:// 或 wss:// 开头');
+        return;
+    }
+
     try {
         ws = new WebSocket(serverUrl);
         

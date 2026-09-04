@@ -10,9 +10,9 @@ class LLMBackend(ABC):
     @abstractmethod
     async def analyze(self, prompt: str, context: str) -> Dict[str, Any]:
         pass
-    
+
     @abstractmethod
-    async def chat(self, message: str, history: List[Dict[str, str]]) -> str:
+    async def chat(self, message: str, prior_messages: List[Dict[str, str]]) -> str:
         pass
 
 class OllamaBackend(LLMBackend):
@@ -22,7 +22,7 @@ class OllamaBackend(LLMBackend):
         self.temperature = config.get("temperature", 0.7)
         self.max_tokens = config.get("max_tokens", 2000)
         self.timeout = config.get("timeout", 30)
-    
+
     async def analyze(self, prompt: str, context: str) -> Dict[str, Any]:
         full_prompt = f"{prompt}\n\n{context}"
         try:
@@ -52,13 +52,13 @@ class OllamaBackend(LLMBackend):
         except Exception as e:
             logger.error(f"Ollama API error: {e}")
             return {"error": str(e), "risk_level": "unknown"}
-    
-    async def chat(self, message: str, history: List[Dict[str, str]]) -> str:
+
+    async def chat(self, message: str, prior_messages: List[Dict[str, str]]) -> str:
         messages = []
-        for h in history:
+        for h in prior_messages:
             messages.append({"role": h.get("role", "user"), "content": h.get("content", "")})
         messages.append({"role": "user", "content": message})
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -94,14 +94,14 @@ class OllamaBackend(LLMBackend):
             error_msg = f"Unexpected error: {type(e).__name__}: {str(e)}"
             logger.error(f"Ollama chat error: {error_msg}", exc_info=True)
             return f"Error: {error_msg}"
-    
+
     def _parse_response(self, response: str) -> Dict[str, Any]:
         return {
             "analysis": response,
             "risk_level": self._extract_risk_level(response),
             "suggestions": self._extract_suggestions(response)
         }
-    
+
     def _extract_risk_level(self, text: str) -> str:
         text_lower = text.lower()
         if "danger" in text_lower or "危险" in text_lower:
@@ -111,7 +111,7 @@ class OllamaBackend(LLMBackend):
         elif "medium" in text_lower or "中" in text_lower:
             return "medium"
         return "low"
-    
+
     def _extract_suggestions(self, text: str) -> List[str]:
         lines = text.split("\n")
         suggestions = []
@@ -131,22 +131,22 @@ class OpenAIBackend(LLMBackend):
         self.temperature = config.get("temperature", 0.7)
         self.max_tokens = config.get("max_tokens", 2000)
         self.timeout = config.get("timeout", 30)
-    
+
     async def analyze(self, prompt: str, context: str) -> Dict[str, Any]:
         if not self.api_key:
             logger.error("OpenAI API key not configured")
             return {"error": "API key not configured", "risk_level": "unknown"}
-        
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        
+
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": context}
         ]
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -174,19 +174,19 @@ class OpenAIBackend(LLMBackend):
         except Exception as e:
             logger.error(f"OpenAI API error: {e}")
             return {"error": str(e), "risk_level": "unknown"}
-    
-    async def chat(self, message: str, history: List[Dict[str, str]]) -> str:
+
+    async def chat(self, message: str, prior_messages: List[Dict[str, str]]) -> str:
         if not self.api_key:
             return "Error: API key not configured"
-        
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        
-        messages = [{"role": h.get("role", "user"), "content": h.get("content", "")} for h in history]
+
+        messages = [{"role": h.get("role", "user"), "content": h.get("content", "")} for h in prior_messages]
         messages.append({"role": "user", "content": message})
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -220,14 +220,14 @@ class OpenAIBackend(LLMBackend):
             error_msg = f"Unexpected error: {type(e).__name__}: {str(e)}"
             logger.error(f"OpenAI chat error: {error_msg}", exc_info=True)
             return f"Error: {error_msg}"
-    
+
     def _parse_response(self, response: str) -> Dict[str, Any]:
         return {
             "analysis": response,
             "risk_level": self._extract_risk_level(response),
             "suggestions": self._extract_suggestions(response)
         }
-    
+
     def _extract_risk_level(self, text: str) -> str:
         text_lower = text.lower()
         if "danger" in text_lower or "危险" in text_lower:
@@ -237,7 +237,7 @@ class OpenAIBackend(LLMBackend):
         elif "medium" in text_lower or "中" in text_lower:
             return "medium"
         return "low"
-    
+
     def _extract_suggestions(self, text: str) -> List[str]:
         lines = text.split("\n")
         suggestions = []
@@ -251,7 +251,7 @@ class OpenAIBackend(LLMBackend):
 
 def create_llm_backend(config: Dict[str, Any]) -> LLMBackend:
     backend_type = config.get("backend", "openai").lower()
-    
+
     if backend_type == "ollama":
         return OllamaBackend(config)
     elif backend_type == "openai":

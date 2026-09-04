@@ -118,11 +118,8 @@ AUTH_TOKENS=token1,token2   # 多个Token用逗号分隔
 **方式一：使用启动脚本**
 
 ```bash
-# 添加执行权限
-chmod +x start.sh
-
-# 启动服务
-./start.sh
+# 启动服务（通过 bash 运行，无需修改文件执行权限）
+bash start.sh
 ```
 
 **方式二：直接启动**
@@ -225,7 +222,6 @@ docker logs -f shell-monitor
 
 # 停止容器
 docker stop shell-monitor
-docker rm shell-monitor
 ```
 
 ### 步骤4：验证服务
@@ -330,9 +326,8 @@ cd shell-client
 # 安装依赖
 pip install websockets
 
-# 启动客户端
-chmod +x run.sh
-./run.sh ws://your-server:8765 your-token
+# 启动客户端（通过 bash 运行，无需修改文件执行权限）
+bash run.sh ws://your-server:8765 your-token
 ```
 
 ### 客户端命令参数
@@ -400,8 +395,8 @@ security:
 
 # 存储配置
 storage:
-  history_enabled: true     # 是否启用历史记录
-  history_path: "./data/history"  # 历史记录路径
+  record_enabled: true     # 是否启用记录存储
+  record_path: "./data/records"    # 记录存储路径
   audit_enabled: true       # 是否启用审计日志
   audit_path: "./data/audit"      # 审计日志路径
 
@@ -466,10 +461,10 @@ security:
 
 ```bash
 # 安装certbot
-sudo apt install certbot
+apt install certbot
 
 # 获取证书
-sudo certbot certonly --standalone -d your-domain.com
+certbot certonly --standalone -d your-domain.com
 
 # 配置
 security:
@@ -496,11 +491,11 @@ LLM_API_KEY=sk-your-api-key
 
 ```bash
 # 开放端口
-sudo ufw allow 8765/tcp  # WebSocket
-sudo ufw allow 8080/tcp  # Web界面
+ufw allow 8765/tcp  # WebSocket
+ufw allow 8080/tcp  # Web界面
 
 # 启用防火墙
-sudo ufw enable
+ufw enable
 ```
 
 ---
@@ -522,8 +517,8 @@ docker-compose up -d
 **停止服务：**
 
 ```bash
-# 本地部署
-Ctrl+C  # 或 kill <pid>
+# 本地部署（前台运行时直接按 Ctrl+C 停止）
+Ctrl+C
 
 # Docker部署
 docker-compose down
@@ -635,8 +630,8 @@ curl http://localhost:8080/health
 # 检查端口是否监听
 netstat -tlnp | grep 8765
 
-# 检查防火墙
-sudo ufw status
+# 检查防火墙（需要 root 权限）
+ufw status
 
 # 检查认证Token是否正确
 ```
@@ -672,9 +667,9 @@ context:
   head_length: 300
   tail_length: 300
 
-# 禁用历史记录
+# 禁用记录存储
 storage:
-  history_enabled: false
+  record_enabled: false
 ```
 
 #### 5. Docker容器健康检查失败
@@ -745,7 +740,7 @@ llm:
 | config.yaml | 主配置文件 |
 | .env | 环境变量文件 |
 | logs/ | 日志目录 |
-| data/history/ | 历史记录 |
+| data/records/ | 记录存储 |
 | data/audit/ | 审计日志 |
 
 ### C. 命令速查

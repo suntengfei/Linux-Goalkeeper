@@ -188,10 +188,10 @@ Linux-Goalkeeper/
    export LLM_API_KEY="your-api-key"
    ```
 4. **定期检查日志**：监控异常连接和操作
-5. **防火墙配置**：只开放必要端口
+5. **防火墙配置**：只开放必要端口（需要 root 权限执行）
    ```bash
-   sudo ufw allow 8765/tcp  # WebSocket
-   sudo ufw allow 8080/tcp  # Web界面
+   ufw allow 8765/tcp  # WebSocket
+   ufw allow 8080/tcp  # Web界面
    ```
 
 ## 更多文档

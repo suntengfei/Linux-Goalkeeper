@@ -32,8 +32,8 @@ DEFAULT_CONFIG = {
         "key_file": ""
     },
     "storage": {
-        "history_enabled": True,
-        "history_path": "./data/history",
+        "record_enabled": True,
+        "record_path": "./data/records",
         "audit_enabled": True,
         "audit_path": "./data/audit"
     },

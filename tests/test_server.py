@@ -67,9 +67,10 @@ class TestSessionManager:
         await manager.create_session("client-2", MockWebSocket())
         
         clients = await manager.get_all_clients()
-        
-        assert "client-1" in clients
-        assert "client-2" in clients
+        client_ids = [c["client_id"] for c in clients]
+
+        assert "client-1" in client_ids
+        assert "client-2" in client_ids
 
 class TestContextManager:
     def test_mask_sensitive_data_password(self):
@@ -92,12 +93,12 @@ class TestContextManager:
         assert "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" not in masked
     
     def test_prepare_for_llm_short_content(self):
-        command = "ls -la"
+        command = "echo hello"
         output = "file1.txt\nfile2.txt"
-        
+
         result = prepare_for_llm(command, output)
-        
-        assert "ls -la" in result
+
+        assert "echo hello" in result
         assert "file1.txt" in result
     
     def test_prepare_for_llm_long_content(self):

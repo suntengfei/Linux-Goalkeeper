@@ -9,60 +9,60 @@ logger = get_logger("session")
 
 class ClientContext:
     MAX_TERMINAL_BUFFER = 50000
-    MAX_SHELL_HISTORY = 500
+    MAX_SHELL_RECORDS = 500
     MAX_CONTEXT = 4000
-    MAX_CHAT_HISTORY = 20
-    
+    MAX_CHAT_MESSAGES = 20
+
     def __init__(self, client_id: str):
         self.client_id = client_id
         self.terminal_buffer: str = ""
-        self.shell_history: List[Dict[str, Any]] = []
-        self.chat_history: List[Dict[str, str]] = []
+        self.shell_records: List[Dict[str, Any]] = []
+        self.chat_messages: List[Dict[str, str]] = []
         self.context: str = ""
         self.created_at = datetime.now()
         self.last_activity = datetime.now()
         self.cleared_at: Optional[datetime] = None
-    
+
     def add_raw_log(self, content: str):
         self.terminal_buffer += content
         if len(self.terminal_buffer) > self.MAX_TERMINAL_BUFFER:
             self.terminal_buffer = self.terminal_buffer[-self.MAX_TERMINAL_BUFFER:]
-        
-        self.shell_history.append({
+
+        self.shell_records.append({
             "timestamp": datetime.now().isoformat(),
             "content": content
         })
-        if len(self.shell_history) > self.MAX_SHELL_HISTORY:
-            self.shell_history = self.shell_history[-self.MAX_SHELL_HISTORY:]
-        
+        if len(self.shell_records) > self.MAX_SHELL_RECORDS:
+            self.shell_records = self.shell_records[-self.MAX_SHELL_RECORDS:]
+
         self.context += f"\n{content}"
         if len(self.context) > self.MAX_CONTEXT:
             self.context = self.context[-self.MAX_CONTEXT:]
         self.last_activity = datetime.now()
-    
+
     def get_terminal_buffer(self) -> str:
         return self.terminal_buffer
-    
+
     def clear_logs(self):
         self.terminal_buffer = ""
-        self.shell_history = []
+        self.shell_records = []
         self.context = ""
         self.cleared_at = datetime.now()
         self.last_activity = datetime.now()
-    
+
     def add_chat_message(self, role: str, content: str):
-        self.chat_history.append({
+        self.chat_messages.append({
             "role": role,
             "content": content
         })
-        if len(self.chat_history) > self.MAX_CHAT_HISTORY:
-            self.chat_history = self.chat_history[-self.MAX_CHAT_HISTORY:]
+        if len(self.chat_messages) > self.MAX_CHAT_MESSAGES:
+            self.chat_messages = self.chat_messages[-self.MAX_CHAT_MESSAGES:]
         self.last_activity = datetime.now()
-    
+
     def get_llm_messages(self, system_prompt: str) -> List[Dict[str, str]]:
         messages = [{"role": "system", "content": system_prompt}]
         messages.append({"role": "system", "content": f"当前Shell会话上下文:\n{self.context[-2000:]}"})
-        messages.extend(self.chat_history)
+        messages.extend(self.chat_messages)
         return messages
 
 class Session:
@@ -185,8 +185,8 @@ class SessionManager:
                 "client_id": client_id,
                 "session_count": len(session_ids),
                 "sessions": sessions_info,
-                "shell_count": len(context.shell_history) if context else 0,
-                "chat_count": len(context.chat_history) if context else 0
+                "shell_count": len(context.shell_records) if context else 0,
+                "chat_count": len(context.chat_messages) if context else 0
             })
         return result
     

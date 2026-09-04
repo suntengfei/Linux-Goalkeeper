@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/data/history /app/data/audit /app/logs
+RUN mkdir -p /app/data/records /app/data/audit /app/logs
 
 ENV PYTHONPATH=/app
 
