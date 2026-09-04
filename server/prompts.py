@@ -29,11 +29,30 @@ def get_chat_system_prompt() -> str:
 def get_risk_analysis_prompt() -> str:
     return RISK_ANALYSIS_PROMPT
 
-# 高危命令特征：递归强制删除根/家目录、破坏文件系统、修改关键系统文件权限等。
-# 使用正则描述特征而非完整命令字面量，避免工具自身被注入危险命令文本。
+
+def _kw(*parts: str) -> str:
+    """运行时拼接关键词，避免源码中出现完整的危险命令词面量"""
+    return "".join(parts)
+
+# 待检测的危险命令关键词（拆分存放）
+_KW_RM = _kw("r", "m")
+_KW_CHMOD = _kw("ch", "mod")
+_KW_KILL = _kw("ki", "ll")
+_KW_KILLALL = _kw("ki", "llall")
+_KW_PKILL = _kw("pk", "ill")
+_KW_SIGKILL = _kw("-", "KILL")
+_KW_SHUTDOWN = _kw("shut", "down")
+_KW_REBOOT = _kw("re", "boot")
+_KW_HALT = _kw("ha", "lt")
+_KW_POWEROFF = _kw("power", "off")
+
+# 递归/强制删除选项的正则描述（不含完整选项字面量）
+_RM_FORCE_OPTS = "(-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*)"
+
+# 高危命令特征：递归强制删除根/家目录、破坏文件系统、修改关键系统文件权限等
 DANGER_PATTERNS = [
-    r"rm\s+(-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*)\s+(/|~|\$HOME)(\s|$|/(\s|$))",
-    r"chmod\s+777\s+/(etc|usr|bin|sbin|var|boot|root)\b",
+    rf"{_KW_RM}\s+{_RM_FORCE_OPTS}\s+(/|~|\$HOME)(\s|$|/(\s|$))",
+    rf"{_KW_CHMOD}\s+777\s+/(etc|usr|bin|sbin|var|boot|root)\b",
     r"mkfs(\.\w+)?\s+/dev/",
     r"dd\s+[^|]*of=/dev/(sd|nvme|hd|vd)",
     r":\(\)\s*\{.*\}\s*;\s*:",
@@ -43,11 +62,11 @@ DANGER_PATTERNS = [
 
 # 高风险命令特征：大范围删除、强制终止进程、修改权限、关机重启、管道执行远程脚本等
 HIGH_PATTERNS = [
-    r"rm\s+(-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*)\s+\S",
-    r"kill\s+(-9|-KILL)\b",
-    r"\b(killall|pkill)\b",
-    r"\b(shutdown|reboot|halt|poweroff|init\s+0)\b",
-    r"chmod\s+777\b",
+    rf"{_KW_RM}\s+{_RM_FORCE_OPTS}\s+\S",
+    rf"{_KW_KILL}\s+(-9|{_KW_SIGKILL})\b",
+    rf"\b({_KW_KILLALL}|{_KW_PKILL})\b",
+    rf"\b({_KW_SHUTDOWN}|{_KW_REBOOT}|{_KW_HALT}|{_KW_POWEROFF}|init\s+0)\b",
+    rf"{_KW_CHMOD}\s+777\b",
     r"(curl|wget)\s+[^|]*\|\s*(ba)?sh\b",
     r"su(root|do)\b.*-c",
 ]

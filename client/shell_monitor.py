@@ -3,6 +3,7 @@
 Shell Monitor Daemon - 使用 script 命令实时捕获 Shell 输入输出
 """
 import os
+import re
 import sys
 import signal
 import asyncio
@@ -60,6 +61,10 @@ class ShellMonitorDaemon:
         shell_pid = os.getppid()
         return f"{ip}_shell{shell_pid}"
 
+    def _safe_name(self) -> str:
+        """将 client_id 净化为可安全用于文件路径的字符串"""
+        return re.sub(r'[^A-Za-z0-9._-]', '_', self.client_id)
+
     def _log(self, message):
         timestamp = datetime.now().isoformat()
         if self.log_file:
@@ -75,7 +80,7 @@ class ShellMonitorDaemon:
             if pid > 0:
                 print(f"[Shell Monitor] Started in background (PID: {pid})")
                 print(f"[Shell Monitor] Client ID: {self.client_id}")
-                print(f"[Shell Monitor] Log file: /tmp/shell_monitor_{self.client_id.replace('/', '_')}.log")
+                print(f"[Shell Monitor] Log file: /tmp/shell_monitor_{self._safe_name()}.log")
                 sys.exit(0)
         except OSError as e:
             self._log(f"fork #1 failed: {e}")
@@ -96,7 +101,7 @@ class ShellMonitorDaemon:
         sys.stdout.flush()
         sys.stderr.flush()
 
-        log_path = f"/tmp/shell_monitor_{self.client_id.replace('/', '_')}.log"
+        log_path = f"/tmp/shell_monitor_{self._safe_name()}.log"
         self.log_file = open(log_path, 'a')
 
         si = open('/dev/null', 'r')
@@ -297,7 +302,7 @@ if [ -f ~/.bashrc ]; then
 fi
 '''
 
-        rc_file = f"/tmp/shell_monitor_rc_{self.client_id.replace('/', '_')}.sh"
+        rc_file = f"/tmp/shell_monitor_rc_{self._safe_name()}.sh"
         # 创建时即指定权限，避免额外的权限修改调用
         fd = os.open(rc_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
         with os.fdopen(fd, 'w') as f:
@@ -308,7 +313,7 @@ fi
 
     def start_script_monitor(self):
         """启动 script 命令监控当前 shell"""
-        self.typescript_file = f"/tmp/typescript_{self.client_id.replace('/', '_')}.log"
+        self.typescript_file = f"/tmp/typescript_{self._safe_name()}.log"
 
         shell = os.environ.get('SHELL', '/bin/bash')
 
@@ -372,7 +377,7 @@ fi
         """WebSocket客户端子进程入口"""
         self.is_daemon = True
         self.parent_pid = os.getppid()
-        log_path = f"/tmp/shell_monitor_{self.client_id.replace('/', '_')}.log"
+        log_path = f"/tmp/shell_monitor_{self._safe_name()}.log"
         self.log_file = open(log_path, 'a')
         asyncio.run(self.async_main())
 

@@ -282,7 +282,7 @@ async function connect() {
 
     isManualDisconnect = false;
 
-    // 校验服务器地址，仅允许 ws/wss 协议，避免任意URL注入
+    // 校验服务器地址，仅允许 ws/wss 协议，并用解析结果重建URL，避免任意URL注入
     let parsedUrl;
     try {
         parsedUrl = new URL(serverUrl);
@@ -294,9 +294,15 @@ async function connect() {
         alert('服务器地址必须以 ws:// 或 wss:// 开头');
         return;
     }
+    // 仅允许常见主机名字符，拦截控制字符与空白
+    if (!/^[\w.\-:#[\]@!$&'()*+,;=~/?%]+$/.test(parsedUrl.host)) {
+        alert('服务器地址包含非法字符');
+        return;
+    }
+    const sanitizedUrl = parsedUrl.protocol + '//' + parsedUrl.host + parsedUrl.pathname + parsedUrl.search;
 
     try {
-        ws = new WebSocket(serverUrl);
+        ws = new WebSocket(sanitizedUrl);
         
         ws.onopen = async () => {
             console.log('WebSocket connected');
