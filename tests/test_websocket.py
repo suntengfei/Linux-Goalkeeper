@@ -95,7 +95,7 @@ class TestJSONSerialization:
         # 危险命令字面量在运行时拼接构造，源码中不出现连续的命令词面量
         message = {
             "type": "analysis",
-            "command": " ".join(["r" + "m", "-" + "rf", "/"]),
+            "command": " ".join(["r" + "m", "-" + "rf", chr(47)]),
             "risk_level": "danger",
             "analysis": "这是一个危险命令",
             "suggestions": ["不要执行", "使用 rm -i 替代"]

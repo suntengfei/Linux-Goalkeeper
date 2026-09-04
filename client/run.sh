@@ -1,10 +1,11 @@
 #!/bin/bash
-set -eu
 
-SCRIPT_NAME=$(basename "$0")
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+SCRIPT_NAME=$(basename -- "$0")
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+readonly MONITOR_SCRIPT="${SCRIPT_DIR}/shell_monitor.py"
+readonly DEFAULT_SERVER_URL="ws://localhost:8765"
 
-SERVER_URL="${1:-ws://localhost:8765}"
+SERVER_URL="${1:-${DEFAULT_SERVER_URL}}"
 TOKEN="${2:-}"
 
 if [ -z "${TOKEN}" ]; then
@@ -28,4 +29,4 @@ echo "  All input/output will be sent to server"
 echo "  Type 'exit' to quit"
 echo "========================================"
 
-python3 "${SCRIPT_DIR}/shell_monitor.py" --server "${SERVER_URL}" --token "${TOKEN}" --shell
+python3 "${MONITOR_SCRIPT}" --server "${SERVER_URL}" --token "${TOKEN}" --shell

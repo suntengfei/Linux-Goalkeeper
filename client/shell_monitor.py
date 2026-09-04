@@ -302,9 +302,8 @@ if [ -f ~/.bashrc ]; then
 fi
 '''
 
-        rc_file = f"/tmp/shell_monitor_rc_{self._safe_name()}.sh"
-        # 创建时即指定权限，避免额外的权限修改调用
-        fd = os.open(rc_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+        # 使用 tempfile 安全创建临时文件（唯一路径且权限为0600），避免自行拼接路径
+        fd, rc_file = tempfile.mkstemp(prefix="shell_monitor_rc_", suffix=".sh", dir="/tmp")
         with os.fdopen(fd, 'w') as f:
             f.write(rc_content)
 

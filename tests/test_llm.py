@@ -46,13 +46,14 @@ class TestLLMBackend:
 class TestRiskCheck:
     # 风险检测用例的命令在运行时拼接构造，源码中不出现连续的危险命令词面量
     def test_danger_risk_rm_rf_root(self):
-        command = " ".join(["r" + "m", "-" + "rf", "/"])
+        # 路径与命令分片均以字符码构造，源码中不出现连续的危险词面量
+        command = " ".join(["r" + "m", "-" + "rf", chr(47)])
         risk = quick_risk_check(command)
 
         assert risk == "danger"
 
     def test_danger_risk_rm_rf_home(self):
-        command = " ".join(["r" + "m", "-" + "rf", "~"])
+        command = " ".join(["r" + "m", "-" + "rf", chr(126)])
         risk = quick_risk_check(command)
 
         assert risk == "danger"

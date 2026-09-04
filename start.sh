@@ -1,16 +1,24 @@
 #!/bin/bash
-set -eu
+
+readonly CONFIG_FILE="config.yaml"
+readonly CONFIG_TEMPLATE="config.yaml.example"
+readonly REQUIREMENTS_FILE="requirements.txt"
+readonly SERVER_MODULE="server.main"
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 
 echo "========================================"
 echo "  Shell监控与AI安全助手 - 启动脚本"
 echo "========================================"
 
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-cd "${SCRIPT_DIR}" || exit 1
+if ! cd "${SCRIPT_DIR}"; then
+    echo "错误: 无法进入脚本目录 ${SCRIPT_DIR}"
+    exit 1
+fi
 
-if [ ! -f "config.yaml" ]; then
-    echo "错误: 找不到 config.yaml 配置文件"
-    echo "请复制 config.yaml.example 为 config.yaml 并修改配置"
+if [ ! -f "${CONFIG_FILE}" ]; then
+    echo "错误: 找不到 ${CONFIG_FILE} 配置文件"
+    echo "请复制 ${CONFIG_TEMPLATE} 为 ${CONFIG_FILE} 并修改配置"
     exit 1
 fi
 
@@ -20,12 +28,17 @@ if ! command -v python3 > /dev/null 2>&1; then
     exit 1
 fi
 
-PYTHON_VERSION=$(python3 --version 2> /dev/null | cut -d ' ' -f 2)
-echo "  Python版本: ${PYTHON_VERSION}"
+PYTHON_VERSION=$(python3 --version)
+if [ $? -ne 0 ]; then
+    echo "错误: 无法获取Python版本"
+    exit 1
+fi
+echo "  ${PYTHON_VERSION}"
 
 echo "[2/3] 安装依赖..."
-if ! pip3 install -q -r requirements.txt 2> /dev/null; then
-    if ! pip install -q -r requirements.txt; then
+if ! pip3 install -q -r "${REQUIREMENTS_FILE}" 2> /dev/null; then
+    echo "  pip3 不可用，尝试 pip..."
+    if ! pip install -q -r "${REQUIREMENTS_FILE}"; then
         echo "错误: 依赖安装失败，请检查网络或 pip 配置"
         exit 1
     fi
@@ -36,4 +49,4 @@ echo "  WebSocket服务: ws://localhost:8765"
 echo "  Web界面: http://localhost:8080"
 echo ""
 
-python3 -m server.main
+python3 -m "${SERVER_MODULE}"
