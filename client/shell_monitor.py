@@ -474,6 +474,9 @@ def main():
 
     args = parser.parse_args()
 
+    if not args.token:
+        parser.error("token 不能为空，用法: shell_monitor.py --server <url> --token <token> --shell")
+
     daemon = ShellMonitorDaemon(
         server_url=args.server,
         token=args.token

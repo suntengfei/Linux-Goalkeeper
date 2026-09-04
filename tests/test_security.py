@@ -1,9 +1,4 @@
 import pytest
-import asyncio
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from server.context_manager import mask_sensitive_data, SENSITIVE_PATTERNS
 from server.session_manager import SessionManager

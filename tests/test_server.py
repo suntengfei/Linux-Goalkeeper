@@ -1,9 +1,4 @@
 import pytest
-import asyncio
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from server.config import load_config, get_llm_config, get_server_config
 from server.session_manager import SessionManager, Session
